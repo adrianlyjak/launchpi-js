@@ -1,11 +1,12 @@
 import { muteColor, RGB } from "./colors";
-import { GridController } from "./GridController";
-import { createEffect, updateEffect } from "./GridState";
+import { GridController, MIDIPress } from "./GridController";
+import { createEffect, deleteEffect, updateEffect } from "./GridState";
 import { createButton, StateStore } from "./GridStateWithButtons";
 import { getColor, getNote } from "./notes";
 
 export interface ColorButton {
   index: number;
+  destroy(): void;
   activateLight(): void;
   deactivateLight(): void;
 }
@@ -115,17 +116,26 @@ export function ColorButton({
       cancel && cancel();
     }
   }
-  grid.addEventListener(group, (evt) => {
+
+  function onEvent(evt: MIDIPress): void {
     if (evt.type === "KeyDown") {
       trigger();
     } else {
       untrigger();
     }
-  });
+  }
+  grid.addEventListener(group, onEvent);
+
+  function destroy(): void {
+    grid.removeEventListener(group, onEvent);
+    cancel && cancel();
+    store.setState(deleteEffect(thisEffect.id, store.state));
+  }
   const button: ColorButton = {
     activateLight,
     deactivateLight,
     index,
+    destroy,
   };
   store.setState(createButton(button, store.state));
   return button;

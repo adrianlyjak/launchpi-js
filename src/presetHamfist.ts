@@ -13,10 +13,6 @@ import {
   rotateFamily,
 } from "./notes";
 
-async function sleep(duration: number) {
-  return new Promise((res) => setTimeout(res, duration));
-}
-
 export async function run() {
   const midi = await nav.requestMIDIAccess({ sysex: true });
   const synth: WebMidi.MIDIOutput | undefined = midi.outputs.get("fluid");
