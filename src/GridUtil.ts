@@ -21,15 +21,13 @@ export class GridUtil {
   }
 
   indexToPosition(index: number): number {
-    const rem = index % this.dimensions;
-    const div = Math.trunc(index / this.dimensions);
-    return (div + 1) * 10 + (rem + 1);
+    const [row, col] = this.rowCol(index);
+    return (row + 1) * 10 + (col + 1);
   }
 
   withNeighborIndexes(index: number, subdivisionSize: number): number[] {
     // find the 0-based coordinates of the index
-    const col = index % this.dimensions;
-    const row = Math.trunc(index / this.dimensions);
+    const [row, col] = this.rowCol(index);
     // find the lower corner of the subdivision
     const colOff = col % subdivisionSize;
     const rowOff = row % subdivisionSize;
@@ -52,13 +50,42 @@ export class GridUtil {
     return Array(sections * sections)
       .fill(undefined)
       .map((_, i) => {
-        const row = Math.trunc(i / sections);
-        const col = i % sections;
+        const [row, col] = new GridUtil(sections).rowCol(i);
         return row * this.dimensions * subdivisionSize + col * subdivisionSize;
       });
   }
   get empty(): undefined[] {
     return Array(this.dimensions * this.dimensions).fill(undefined);
+  }
+
+  rowCol(index: number): [number, number] {
+    const row = Math.trunc(index / this.dimensions);
+    const col = index % this.dimensions;
+    return [row, col];
+  }
+
+  resize<T>(input: T[], fill: T, target: GridUtil): T[] {
+    if (target.dimensions < this.dimensions) {
+      throw new Error("cannot downsample");
+    }
+    return target.indexArray().map((i) => {
+      const [row, col] = target.rowCol(i);
+      if (col >= this.dimensions) {
+        return fill;
+      } else if (row >= this.dimensions) {
+        return fill;
+      } else {
+        return input[row * this.dimensions + col]!;
+      }
+    });
+  }
+
+  indexInResizedGrid(index: number, target: GridUtil): number {
+    if (target.dimensions < this.dimensions) {
+      throw new Error("cannot downsample");
+    }
+    const [row, col] = this.rowCol(index);
+    return row * target.dimensions + col;
   }
 }
 

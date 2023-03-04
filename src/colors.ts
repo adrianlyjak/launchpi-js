@@ -42,3 +42,7 @@ export type RGB = [number, number, number];
 export function addColors(a: RGB, b: RGB): RGB {
   return a.map((a, i) => Math.max(0, Math.min(1, a + b[i]))) as RGB;
 }
+
+export function muteColor(color: RGB, factor: number): RGB {
+  return color.map((c) => Math.min(1, Math.max(0, c * factor))) as RGB;
+}

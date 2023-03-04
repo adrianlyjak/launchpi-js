@@ -34,7 +34,7 @@ describe("LaunchpadMiniMK3", () => {
     const corners: (RGB | undefined)[] = grid9x9.empty;
     corners[0] = [1, 1, 1];
     corners[80] = [0, 0, 0];
-    pad.setGrid(corners, grid9x9);
+    pad.setGrid(corners);
     expect(out.sentEvents).toHaveLength(1);
     expect(out.sentEvents[0]).toEqual([
       240, 0, 32, 41, 2, 13, 3, 3, 11, 127, 127, 127, 3, 99, 0, 0, 0, 247,

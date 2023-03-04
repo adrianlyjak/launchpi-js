@@ -1,11 +1,19 @@
 import { LaunchpadMiniMK3 } from "./LaunchpadMiniMK3";
 
 import nav from "jzz";
+import { muteColor, RGB } from "./colors";
 import { GridController } from "./GridController";
-import { grid8x8, grid9x9, GridUtil } from "./GridUtil";
-import { getColor, noteColorArray, Notes } from "./notes";
-import { RGB } from "./colors";
-import { createEffect, GridState, renderGrid } from "./GridState";
+import { createEffect, GridState, renderGrid, updateEffect } from "./GridState";
+import {
+  familyOfHarmonicMajor,
+  familyOfHarmonicMinor,
+  familyOfMelodicMinor,
+  familyOfNaturalMajor,
+  getColor,
+  getNote,
+  Notes,
+  rotateFamily,
+} from "./notes";
 
 async function sleep(duration: number) {
   return new Promise((res) => setTimeout(res, duration));
@@ -13,93 +21,161 @@ async function sleep(duration: number) {
 
 export async function run() {
   const midi = await nav.requestMIDIAccess({ sysex: true });
-  const fluid = midi.outputs.get("fluid");
+  const synth = midi.outputs.get("fluid");
   var outs = [] as any[];
   midi.outputs.forEach((x) => outs.push(x));
 
-  if (!fluid) throw new Error("fluidsynth is not connected!");
+  if (!synth) throw new Error("fluidsynth is not connected!");
   const grid: GridController = LaunchpadMiniMK3.fromMidiAccess(midi);
-  grid.addEventListener((msg) => {
-    if (msg.data[0] == 144) {
-      const position = msg.data[1];
-      const idx = grid8x8.positionToIndex(position);
-      const note = idx + 36;
-      const withNeighbors = new Set(grid8x8.withNeighborIndexes(idx, 2));
-      grid.setGrid(
-        grid8x8
-          .indexArray()
-          .map((i) =>
-            withNeighbors.has(i) ? ([0.5, 0.5, 0.5] as RGB) : undefined
-          ),
-        grid8x8
-      );
-      fluid.send([144, note, msg.data[2]]);
-    }
+
+  const store = StateStore({
+    initialState: { effects: [], screenDimensions: 9, buttons: [] },
+    grid,
   });
 
-  let gs: GridState = { effects: [], screenDimensions: 8 };
+  const baseProps = {
+    store,
+    grid,
+    synth,
+  };
+  const intervals = rotateFamily(familyOfHarmonicMinor, 0);
+  const startInteger = 60;
+  const buttonPlacements = [
+    [0],
+    [2],
+    [4],
+    [6],
 
-  const notes = [Notes.C, Notes.D, Notes.E, Notes.F, Notes.G, Notes.A, Notes.B];
-  grid8x8.indexArray(2).forEach((x, i) => {
-    const note = notes[i % notes.length];
-    const color = getColor(note);
-    const screen: (RGB | undefined)[] = grid8x8.empty;
-    for (const j of grid8x8.withNeighborIndexes(x, 2)) {
-      screen[j] = color;
-    }
-    gs = createEffect({ screen: screen }, gs);
+    [24],
+    [22],
+    [20],
+    [18],
+
+    [36],
+    [38],
+    [40],
+    [42],
+
+    [60],
+    [58],
+    [56],
+    [54],
+  ];
+  buttonPlacements.map((positions, i) => {
+    const rem = i % intervals.length;
+    const octave = Math.trunc(i / intervals.length);
+    const midi = intervals[rem] + octave * 12 + startInteger;
+    return ColorButton({ positions, note: midi, ...baseProps });
   });
-
-  grid.setGrid(renderGrid(gs), grid8x8);
   const controls = Array(9 * 9)
     .fill(null)
     .map((_, i) => {
       if (i % 9 == 8 || i > 71) {
-        return [1, 1, 1] as RGB;
+        return [0.1, 0.1, 0.1] as RGB;
       } else {
         return undefined;
       }
     });
 
-  grid.setGrid(controls, grid9x9);
+  grid.setGrid(controls);
 }
 
-interface ColorButton {
-  indexes: number[];
+export interface ColorButton {}
+
+export function ColorButton({
+  positions,
+  note,
+  store,
+  grid,
+  synth,
+}: {
+  positions: number[];
+  note: number;
+  store: StateStore;
+  grid: GridController;
+  synth: WebMidi.MIDIOutput;
+}): ColorButton {
+  const noteValue = getNote(note);
+  const color = getColor(noteValue);
+  const muted = muteColor(color, 0.4);
+  const group = positions.flatMap((p) =>
+    grid.gridDimensions.withNeighborIndexes(p, 2)
+  );
+  const screen = grid.gridDimensions.empty as (RGB | undefined)[];
+  for (const n of group) {
+    screen[n] = muted;
+  }
+  store.setState(createEffect({ screen }, store.state));
+  const thisEffect = store.state.effects[store.state.effects.length - 1];
+  let active: number = 0;
+  let activeTime: number = 0;
+  function trigger() {
+    active += 1;
+    if (active === 1) {
+      activeTime = new Date().valueOf();
+      synth.send([144, note, 127]);
+      for (const neighbor of group) {
+        screen[neighbor] = muteColor(color, 1.125);
+      }
+      store.setState(updateEffect({ ...thisEffect, screen }, store.state));
+    }
+  }
+  function untrigger() {
+    let passed = new Date().valueOf() - activeTime;
+    let atLeast = Math.max(0, 300 - passed);
+    setTimeout(() => {
+      active -= 1;
+      if (active === 0) {
+        synth.send([144, note, 0]);
+        for (const neighbor of group) {
+          screen[neighbor] = muted;
+        }
+        store.setState(updateEffect({ ...thisEffect, screen }, store.state));
+      }
+    }, atLeast);
+  }
+  grid.addEventListener(group, (evt) => {
+    if (evt.type === "KeyDown") {
+      trigger();
+    } else {
+      untrigger();
+    }
+  });
+  const button: ColorButton = {};
+  store.setState(createButton(button, store.state));
+  return button;
 }
-function ColorButton({ indexes }: { indexes: number[] }): ColorButton {
+
+interface GridStateWithButtons extends GridState {
+  readonly buttons: readonly ColorButton[];
+}
+
+function createButton(
+  button: ColorButton,
+  state: GridStateWithButtons
+): GridStateWithButtons {
   return {
-    indexes,
+    ...state,
+    buttons: state.buttons.concat([button]),
   };
 }
+interface StateStore {
+  state: GridStateWithButtons;
+  setState(gs: GridStateWithButtons): void;
+}
 
-// map out
-
-const notes = async function testFluidSynthOut(
-  fluid: WebMidi.MIDIOutput
-): Promise<void> {
-  // send a noteon with C3
-  fluid.send([144, 60, 127]);
-  await sleep(1000);
-  fluid.send([144, 60, 0]);
-  await sleep(1000);
-  // switch bank and program to change instruments to "Thunder" from "GeneralUser" midi
-  // font expected to be loaded (position 002-122)
-  // https://www.midi.org/specifications-old/item/table-2-expanded-messages-list-status-bytes
-  fluid.send([192, 122]); // change program
-
-  // change bank
-  // fluid.send([176, 0, 2])
-
-  while (true) {
-    await sleep(1000);
-    fluid.send([144, 60, 127]);
-    await sleep(1000);
-
-    fluid.send([144, 72, 127]);
-    await sleep(1000);
-    fluid.send([144, 84, 127]);
-    await sleep(1000);
-    fluid.send([144, 22, 127]);
-  }
-};
+export function StateStore(props: {
+  initialState: GridStateWithButtons;
+  grid: GridController;
+}): StateStore {
+  var state = props.initialState;
+  return {
+    get state(): GridStateWithButtons {
+      return state;
+    },
+    setState(gs: GridStateWithButtons): void {
+      state = gs;
+      props.grid.setGrid(renderGrid(state));
+    },
+  };
+}

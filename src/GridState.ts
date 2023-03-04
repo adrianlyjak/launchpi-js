@@ -32,27 +32,30 @@ export function renderGrid(gridState: GridState): (RGB | undefined)[] {
   });
 }
 
-export function createEffect(
+export function createEffect<T extends GridState>(
   effect: Omit<Effect, "id">,
-  gridState: GridState
-): GridState {
+  gridState: T
+): T {
   return {
     ...gridState,
     effects: gridState.effects.concat([{ ...effect, id: nextId() }]),
   };
 }
 
-export function updateEffect(effect: Effect, gridState: GridState): GridState {
+export function updateEffect<T extends GridState>(
+  effect: Effect,
+  gridState: T
+): T {
   return {
     ...gridState,
     effects: gridState.effects.map((x) => (x.id === effect.id ? effect : x)),
   };
 }
 
-export function deleteEffect(
+export function deleteEffect<T extends GridState>(
   effectId: string,
-  gridState: GridState
-): GridState {
+  gridState: T
+): T {
   return {
     ...gridState,
     effects: gridState.effects.filter((x) => x.id !== effectId),

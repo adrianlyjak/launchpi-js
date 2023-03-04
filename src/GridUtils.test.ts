@@ -42,4 +42,17 @@ describe("GridUtils", () => {
       }
     });
   });
+
+  describe("changing grid sizes", () => {
+    it("should resize 2x2 to 3x3", () => {
+      const values2x2 = [undefined, 1, 2, undefined];
+      const result = new GridUtil(2).resize(values2x2, 0, new GridUtil(3));
+      expect(result).toHaveLength(9);
+      expect(result).toEqual([undefined, 1, 0, 2, undefined, 0, 0, 0, 0]);
+    });
+    it("should return the index in the new grid", () => {
+      const result = new GridUtil(3).indexInResizedGrid(8, new GridUtil(5));
+      expect(result).toEqual(12);
+    });
+  });
 });

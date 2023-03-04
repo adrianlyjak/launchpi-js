@@ -8,6 +8,8 @@ export class LaunchpadMiniMK3 implements GridController {
   private output: WebMidi.MIDIOutput;
   private evt: EventEmitter = new EventEmitter();
 
+  readonly gridDimensions: GridUtil = grid9x9;
+
   static fromMidiAccess(midi: WebMidi.MIDIAccess) {
     const { input, output } = getMini(midi);
     return new LaunchpadMiniMK3(input, output);
@@ -53,13 +55,13 @@ export class LaunchpadMiniMK3 implements GridController {
     }
   }
 
-  setGrid(grid: (RGB | undefined)[], gridUtil: GridUtil): void {
+  setGrid(grid: (RGB | undefined)[]): void {
     const toSet: SetPaletteColorRGB[] = grid.flatMap((gridValue, i) => {
       if (!gridValue) {
         return [];
       } else {
         const asInt = gridValue.map((x) => Math.round(x * 127));
-        const position = gridUtil.indexToPosition(i);
+        const position = this.gridDimensions.indexToPosition(i);
         const command: SetPaletteColorRGB = [
           3,
           position,

@@ -2,6 +2,8 @@ import { RGB } from "./colors";
 import { GridUtil } from "./GridUtil";
 
 export interface GridController {
+  readonly gridDimensions: GridUtil;
+
   addEventListener(
     keys: "*" | number[],
     callback: (evt: MIDIPress) => void
@@ -12,7 +14,7 @@ export interface GridController {
     callback: (evt: MIDIPress) => void
   ): void;
 
-  setGrid(grid: (RGB | undefined)[], gridConfig: GridUtil): void;
+  setGrid(grid: (RGB | undefined)[]): void;
 }
 
 export interface MIDIPress {

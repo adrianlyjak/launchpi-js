@@ -39,3 +39,26 @@ export const noteColorArray: RGB[] = allNotes.map((i) => noteColorsMap[i]);
 export function getColor(note: Notes): RGB {
   return noteColorsMap[note];
 }
+
+export function getNote(midiIndex: number): Notes {
+  return allNotes[midiIndex % allNotes.length]!;
+}
+
+export const familyOfNaturalMajor = [0, 2, 4, 5, 7, 9, 11];
+export const familyOfMelodicMinor = [0, 2, 3, 5, 7, 9, 11];
+export const familyOfHarmonicMajor = [0, 2, 4, 5, 7, 8, 11];
+export const familyOfHarmonicMinor = [0, 2, 3, 5, 7, 8, 11];
+
+export function rotateFamily(family: number[], rotation: number): number[] {
+  const qualified = rotation % family.length;
+  if (qualified === 0) {
+    return family;
+  } else {
+    const front = family.slice(0, rotation);
+    const tail = family.slice(rotation);
+    const newFront = tail.map((i) => i - tail[0]);
+    const incr = 12 - family[family.length - 1];
+    const newTail = front.map((i) => i + incr + newFront[newFront.length - 1]);
+    return newFront.concat(newTail);
+  }
+}
