@@ -6,10 +6,11 @@ import { Hamfistrument } from "./Hamfistrument";
 import { Cancel } from "./messaging";
 import * as notes from "./notes";
 import * as colors from "./colors";
+import { createLogger } from "./logger";
 
 export interface NoteButtonActorProps {
   noteIndex: number;
-  notePosition: number;
+  notePositions: number[];
   context: {
     instrument: Hamfistrument;
     grid: GridController;
@@ -19,12 +20,16 @@ export interface NoteButtonActorProps {
 
 export function NoteButtonActor({
   noteIndex,
-  notePosition,
+  notePositions,
   context: { instrument, grid, store },
 }: NoteButtonActorProps): Cancel {
   let thisEffect: undefined | Effect;
 
-  const neighbors = grid.gridDimensions.withNeighborIndexes(notePosition, 2);
+  const logger = createLogger(`NoteButtonActor:${noteIndex}`);
+
+  const neighbors = notePositions.flatMap((notePosition) =>
+    grid.gridDimensions.withNeighborIndexes(notePosition, 2)
+  );
 
   function getMidiActive(): {
     midi: number;
@@ -48,6 +53,7 @@ export function NoteButtonActor({
     for (const neighbor of neighbors) {
       screen[neighbor] = color;
     }
+    logger.debug("update grid lights", midi);
     if (thisEffect) {
       thisEffect = { ...thisEffect, screen };
       store.setState(updateEffect(thisEffect, store.state));
@@ -67,13 +73,21 @@ export function NoteButtonActor({
   );
 
   let cancelActive: Cancel | undefined;
+  let active = 0;
   function onMidiEvent(midipress: MIDIPress) {
     if (midipress.type === "KeyDown") {
-      cancelActive && cancelActive();
-      cancelActive = instrument.triggerNoteIndex(notePosition);
+      active += 1;
+      if (active === 1) {
+        logger.debug("trigger");
+        cancelActive = instrument.triggerNoteIndex(noteIndex);
+      }
     } else {
-      cancelActive && cancelActive();
-      cancelActive = undefined;
+      active = Math.max(0, active - 1); // fix bug if midi is started with key pressed down
+      if (active === 0) {
+        logger.debug("untrigger");
+        cancelActive && cancelActive();
+        cancelActive = undefined;
+      }
     }
   }
   grid.addEventListener(neighbors, onMidiEvent);

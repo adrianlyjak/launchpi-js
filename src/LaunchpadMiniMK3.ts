@@ -23,7 +23,8 @@ export class LaunchpadMiniMK3 implements GridController {
   }
 
   private _onEvent = (e: WebMidi.MIDIMessageEvent) => {
-    if (e.data[0] === 144) {
+    // noteon and control events. Same structure
+    if (e.data[0] === 144 || e.data[0] === 176) {
       const midiPress: MIDIPress = {
         keyIndex: grid9x9.positionToIndex(e.data[1]),
         type: e.data[2] === 0 ? "KeyUp" : "KeyDown",
