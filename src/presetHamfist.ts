@@ -2,7 +2,7 @@ import { LaunchpadMiniMK3 } from "./LaunchpadMiniMK3";
 
 import nav from "jzz";
 import { GridController } from "./GridController";
-import { StateStore } from "./GridStateWithButtons";
+import { StateStore } from "./StateStore";
 import { Hamfistrument } from "./Hamfistrument";
 import { Cancel } from "./messaging";
 import { NoteButtonActor } from "./NoteButtonActor";
@@ -26,7 +26,6 @@ export async function run(): Promise<Cancel> {
     initialState: {
       effects: [],
       screenDimensions: grid.gridDimensions.dimensions,
-      buttons: [],
     },
     grid,
   });

@@ -1,7 +1,7 @@
 import * as mobx from "mobx";
 import { GridController, MIDIPress } from "./GridController";
 import { createEffect, Effect, updateEffect } from "./GridState";
-import { StateStore } from "./GridStateWithButtons";
+import { StateStore } from "./StateStore";
 import { Hamfistrument } from "./Hamfistrument";
 import { Cancel } from "./messaging";
 import * as notes from "./notes";
