@@ -1,22 +1,33 @@
-import { RGB } from "./colors";
+import { RGB } from "../functions/colors";
 import { MIDIPress } from "./GridController";
-import { grid9x9 } from "./GridUtil";
+import { grid9x9 } from "../functions/GridUtil";
 import { LaunchpadMiniMK3 } from "./LaunchpadMiniMK3";
+import { Input, MidiCallback, MidiMessage, Output } from "midi";
 
-function mockInput(): WebMidi.MIDIInput {
-  return {
-    type: "input",
-  } as any as WebMidi.MIDIInput;
+function mockInput(): Input & { trigger: (msg: MidiMessage) => void } {
+  const callbacks: MidiCallback[] = [];
+  const input = Object.assign({} as any as Input, {
+    on(message: "message", callback: MidiCallback): void {
+      callbacks.push(callback);
+    },
+    trigger(msg: MidiMessage): void {
+      for (const c of callbacks) {
+        c(new Date().valueOf(), msg);
+      }
+    },
+  });
+  return input;
 }
 
-function mockOutput(): WebMidi.MIDIOutput & { sentEvents: number[][] } {
+function mockOutput(): Output & { sentEvents: number[][] } {
   const sent = [] as number[][];
-  return {
-    ...({} as any as WebMidi.MIDIOutput),
-    type: "output",
-    send: (data) => sent.push([...data]),
+  const out = Object.assign({} as any as Output, {
+    send: (data: any): void => {
+      sent.push([...data]);
+    },
     sentEvents: sent,
-  };
+  });
+  return out;
 }
 
 describe("LaunchpadMiniMK3", () => {
@@ -31,10 +42,10 @@ describe("LaunchpadMiniMK3", () => {
     const out = mockOutput();
     const pad = new LaunchpadMiniMK3(mockInput(), out);
     out.sentEvents.pop();
-    const corners: (RGB | undefined)[] = grid9x9.empty;
-    corners[0] = [1, 1, 1];
-    corners[80] = [0, 0, 0];
-    pad.setGrid(corners);
+    pad.setColors([
+      { i: 0, c: [1, 1, 1] },
+      { i: 80, c: [0, 0, 0] },
+    ]);
     expect(out.sentEvents).toHaveLength(1);
     expect(out.sentEvents[0]).toEqual([
       240, 0, 32, 41, 2, 13, 3, 3, 11, 127, 127, 127, 3, 99, 0, 0, 0, 247,
@@ -55,25 +66,15 @@ describe("LaunchpadMiniMK3", () => {
     pad.addEventListener("*", onAny);
     pad.addEventListener([0, 1], onCoupleKeyPresses);
     // bottom left on
-    inp.onmidimessage({
-      data: new Uint8Array([144, 11, 127]),
-    } as WebMidi.MIDIMessageEvent);
+    inp.trigger([144, 11, 127]);
     // top right on
-    inp.onmidimessage({
-      data: new Uint8Array([144, 99, 127]),
-    } as WebMidi.MIDIMessageEvent);
+    inp.trigger([144, 99, 127]);
     // bottom left off
-    inp.onmidimessage({
-      data: new Uint8Array([144, 11, 0]),
-    } as WebMidi.MIDIMessageEvent);
+    inp.trigger([144, 11, 0]);
     pad.removeEventListener("*", onAny);
-    inp.onmidimessage({
-      data: new Uint8Array([144, 12, 127]),
-    } as WebMidi.MIDIMessageEvent);
+    inp.trigger([144, 12, 127]);
     pad.removeEventListener([0, 1], onCoupleKeyPresses);
-    inp.onmidimessage({
-      data: new Uint8Array([144, 12, 0]),
-    } as WebMidi.MIDIMessageEvent);
+    inp.trigger([144, 12, 0]);
     expect(anyPresses).toHaveLength(3);
     expect(anyPresses.map((x) => x.keyIndex)).toEqual([0, 80, 0]);
     expect(anyPresses.map((x) => x.type)).toEqual([

@@ -20,10 +20,10 @@ describe("GridUtils", () => {
       expect(arr).toHaveLength(64);
     });
     it("should subdivide into minimum values in a 2x2", () => {
-      expect(new GridUtil(4).indexArray(2)).toEqual([0, 2, 8, 10]);
+      expect(GridUtil.square(4).indexArray(2)).toEqual([0, 2, 8, 10]);
     });
     it("should subdivide into values in an uneven 3x3", () => {
-      expect(new GridUtil(8).indexArray(3)).toEqual([
+      expect(GridUtil.square(8).indexArray(3)).toEqual([
         0, 3, 6, 24, 27, 30, 48, 51, 54,
       ]);
     });
@@ -46,13 +46,67 @@ describe("GridUtils", () => {
   describe("changing grid sizes", () => {
     it("should resize 2x2 to 3x3", () => {
       const values2x2 = [undefined, 1, 2, undefined];
-      const result = new GridUtil(2).resize(values2x2, 0, new GridUtil(3));
+      const result = GridUtil.square(2).resize(
+        values2x2,
+        0,
+        GridUtil.square(3)
+      );
       expect(result).toHaveLength(9);
       expect(result).toEqual([undefined, 1, 0, 2, undefined, 0, 0, 0, 0]);
     });
     it("should return the index in the new grid", () => {
-      const result = new GridUtil(3).indexInResizedGrid(8, new GridUtil(5));
+      const result = GridUtil.square(3).indexInResizedGrid(
+        8,
+        GridUtil.square(5)
+      );
       expect(result).toEqual(12);
+    });
+
+    it("should support rectangular grids", () => {
+      const result = GridUtil.rect({ x: 3, y: 4 }).indexInResizedGrid(
+        8,
+        GridUtil.rect({ x: 5, y: 3 })
+      );
+      expect(result).toEqual(12);
+    });
+
+    it("should support x offsets", () => {
+      const result = GridUtil.rect({ x: 3, y: 4 }).indexInResizedGrid(
+        8,
+        GridUtil.rect({ x: 5, y: 3 }),
+        {
+          offsetX: 2,
+        }
+      );
+      expect(result).toEqual(14);
+    });
+    it("should support y offsets", () => {
+      const result = GridUtil.rect({ x: 3, y: 3 }).indexInResizedGrid(
+        8,
+        GridUtil.rect({ x: 5, y: 5 }),
+        {
+          offsetY: 2,
+        }
+      );
+      expect(result).toEqual(22);
+    });
+    it("should resize mini grid", () => {
+      const mini = GridUtil.rect({ x: 3, y: 2 });
+      const big = GridUtil.square(8);
+      const reindexed = mini
+        .indexArray()
+        .map((i) =>
+          mini.indexInResizedGrid(i, big, { offsetX: 2, offsetY: 3 })
+        );
+      expect(reindexed).toEqual([26, 27, 28, 34, 35, 36]);
+      // . . . . . . . .
+      // . . . . . . . .
+      // . . . . . . . .
+      // . . x x x . . .
+      // . . x x x . . .
+      // . . . . . . . .
+      // . . . . . . . .
+      // . . . . . . . .
     });
   });
 });

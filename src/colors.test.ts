@@ -1,4 +1,4 @@
-import { createRainbow } from "./colors";
+import { createRainbow } from "./functions/colors";
 
 describe("rainbow", () => {
   it("should make a simple rainbow with 6 steps", () => {

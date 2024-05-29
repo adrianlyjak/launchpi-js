@@ -1,4 +1,4 @@
-import { RGB } from "./colors";
+import { RGB } from "../functions/colors";
 
 export enum Notes {
   C = 0,
