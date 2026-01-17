@@ -30,11 +30,12 @@ NODE_PATH=$(which node)
 echo "Using node at: $NODE_PATH"
 
 # Create/update the systemd user service file
+# Note: launchpi manages FluidSynth as a child process, so no dependency on fluidsynth service
 cat > "$SERVICE_FILE" <<EOF
 [Unit]
 Description=Launchpi MIDI controller service
-After=fluidsynth-launchpi.service
-Wants=fluidsynth-launchpi.service
+After=pipewire.service pipewire-pulse.service
+Wants=pipewire-pulse.service
 
 [Service]
 Type=simple
