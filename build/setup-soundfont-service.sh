@@ -4,11 +4,20 @@ set -e
 # Idempotent script to set up the fluidsynth systemd service for soundfont
 # Can be re-run safely to update the service
 
-SERVICE_NAME="fluidsynth"
-SERVICE_FILE="/etc/systemd/system/${SERVICE_NAME}.service"
+# Install required system dependencies
+echo "Installing system dependencies..."
+sudo apt-get update
+sudo apt-get install -y build-essential libasound2-dev fluidsynth wget unzip
+
+SERVICE_NAME="fluidsynth-launchpi"
+SERVICE_DIR="$HOME/.config/systemd/user"
+SERVICE_FILE="${SERVICE_DIR}/${SERVICE_NAME}.service"
 SOUNDFONT_PATH="/usr/share/sounds/sf2/GeneralUser_GS_v1.471.sf2"
 
-echo "Setting up ${SERVICE_NAME} systemd service..."
+# Ensure user systemd directory exists
+mkdir -p "$SERVICE_DIR"
+
+echo "Setting up ${SERVICE_NAME} user systemd service..."
 
 # Download and install soundfont if not present
 if [ ! -f "$SOUNDFONT_PATH" ]; then
@@ -38,39 +47,45 @@ else
     echo "Soundfont already installed at $SOUNDFONT_PATH"
 fi
 
-# Create/update the systemd service file
-sudo tee "$SERVICE_FILE" > /dev/null <<'EOF'
+# Create/update the systemd user service file
+cat > "$SERVICE_FILE" <<'EOF'
 [Unit]
-Description=fluidsynth service for output from launchpi
+Description=FluidSynth service for launchpi MIDI output
+After=pipewire.service pipewire-pulse.service
+Wants=pipewire-pulse.service
 
 [Service]
 Type=simple
-ExecStart=fluidsynth -a alsa -m alsa_seq /usr/share/sounds/sf2/GeneralUser_GS_v1.471.sf2 -o shell.port=9800 --server -i -p fluid
+ExecStart=/usr/bin/fluidsynth -a pulseaudio -m alsa_seq /usr/share/sounds/sf2/GeneralUser_GS_v1.471.sf2 -o shell.port=9800 --server -i -p fluid
 Restart=on-failure
 RestartSec=5s
 
 [Install]
-WantedBy=multi-user.target
+WantedBy=default.target
 EOF
 
 echo "Service file written to $SERVICE_FILE"
 
-# Reload systemd to pick up changes
-sudo systemctl daemon-reload
-echo "Systemd daemon reloaded"
+# Reload user systemd to pick up changes
+systemctl --user daemon-reload
+echo "User systemd daemon reloaded"
 
-# Enable the service to start on boot
-sudo systemctl enable "${SERVICE_NAME}.service"
+# Enable the service to start on login
+systemctl --user enable "${SERVICE_NAME}.service"
 echo "Service enabled"
 
+# Enable lingering so user services start at boot (not just login)
+sudo loginctl enable-linger "$USER"
+echo "Lingering enabled for $USER"
+
 # Restart the service to apply any changes
-sudo systemctl restart "${SERVICE_NAME}.service"
+systemctl --user restart "${SERVICE_NAME}.service"
 echo "Service restarted"
 
 # Show status
 echo ""
 echo "Service status:"
-sudo systemctl status "${SERVICE_NAME}.service" --no-pager || true
+systemctl --user status "${SERVICE_NAME}.service" --no-pager || true
 
 echo ""
 echo "Setup complete!"
