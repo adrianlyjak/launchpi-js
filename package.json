@@ -28,5 +28,6 @@
     "dev": "ts-node src/midi.ts",
     "prod": "NODE_ENV=production node dist/midi.js",
     "prof": "NODE_ENV=production node --prof dist/midi.js"
-  }
+  },
+  "packageManager": "pnpm@10.28.0+sha1.99bafbd81cd8141d21254ec30f60efd7d5028f14"
 }
