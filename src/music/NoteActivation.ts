@@ -1,7 +1,7 @@
 import { createLogger } from "../logger";
 
 export interface ActivationChannel {
-  start: (note: number) => void;
+  start: (note: number, velocity?: number) => void;
   stop: (note: number) => void;
 }
 
@@ -10,6 +10,8 @@ export interface NoteActivation {
   note: number;
   /** micro beats */
   beats?: number;
+  /** velocity 0-1, defaults to channel volume */
+  velocity?: number;
 }
 
 export interface Activation {
@@ -22,13 +24,15 @@ export interface Activation {
 
 export function chordActivation(
   notes: number[],
-  microbeats: number
+  microbeats: number,
+  velocity?: number
 ): NoteActivation[][] {
   return [
     notes.map((note) => {
       return {
         note: note,
         beats: microbeats,
+        velocity,
       };
     }),
   ].concat(Array(microbeats - 1).fill([]));
@@ -118,7 +122,7 @@ export function SequencedActivation({
         if (command.on) {
           const repititionOk = !command.oneTime || repetition === 0;
           if (repititionOk && !unwinding) {
-            channel.start(command.note);
+            channel.start(command.note, command.velocity);
           }
         } else {
           if (seenNotes.has(command.note)) {
@@ -157,6 +161,7 @@ export interface OnOff {
   note: number;
   on: boolean;
   oneTime?: boolean;
+  velocity?: number;
 }
 
 export function mapSequence(sequence: NoteActivation[][]): OnOff[][] {
@@ -174,6 +179,7 @@ export function mapSequence(sequence: NoteActivation[][]): OnOff[][] {
       indices[i].push({
         note: note.note,
         on: true,
+        velocity: note.velocity,
         ...(note.beats === undefined ? { oneTime: true } : {}),
       });
     });

@@ -197,8 +197,8 @@ export class Instrument {
 
   private activationChannel(channel: number): ActivationChannel {
     return {
-      start: (note): void => {
-        this._trigger(channel, note);
+      start: (note, velocity): void => {
+        this._trigger(channel, note, velocity);
       },
       stop: (note): void => {
         this._untrigger(channel, note);
@@ -206,7 +206,7 @@ export class Instrument {
     };
   }
 
-  private _trigger(channel: number, note: number): void {
+  private _trigger(channel: number, note: number, velocity?: number): void {
     this.logger.debug("add notes", { channel, note });
     const hasNote = this.channels[channel].activeNotes.includes(note);
     if (!hasNote) {
@@ -216,7 +216,7 @@ export class Instrument {
         o.noteon({
           channel: channelObj.index,
           note,
-          velocity: this.channels[channel].volume,
+          velocity: velocity ?? this.channels[channel].volume,
         });
       }
       this.emitter.emit(`note:${getNote(note)}`, { active: true });

@@ -58,6 +58,13 @@ export function chordActivationN(): InstrumentActivation {
   };
 }
 
+/** Velocity for arpeggio notes, quieter than main keyboard */
+const ARPEGGIO_VELOCITY = 0.5;
+
+/**
+ * Arpeggio - plays chord tones sequentially (low to high).
+ * Plays at reduced velocity to sit behind main keyboard notes.
+ */
 export function arpegiatedChordActivationN(
   offset: number
 ): InstrumentActivation {
@@ -70,13 +77,18 @@ export function arpegiatedChordActivationN(
       sequence: notes.flatMap((note) =>
         chordActivation(
           [note],
-          Math.max(1, timeSignature.props.defaultMicrobeats)
+          Math.max(1, timeSignature.props.defaultMicrobeats),
+          ARPEGGIO_VELOCITY
         )
       ),
     });
   };
 }
 
+/**
+ * Descending arpeggio - plays chord tones high to low.
+ * Plays at reduced velocity to sit behind main keyboard notes.
+ */
 export function arpegiatedChordActivationHighLow(): InstrumentActivation {
   return ({ scale, timeSignature, channel, note }) => {
     const start = scale.midiScale.indexOf(note);
@@ -87,7 +99,8 @@ export function arpegiatedChordActivationHighLow(): InstrumentActivation {
       sequence: notes.flatMap((note) =>
         chordActivation(
           [note],
-          Math.max(1, timeSignature.props.defaultMicrobeats)
+          Math.max(1, timeSignature.props.defaultMicrobeats),
+          ARPEGGIO_VELOCITY
         )
       ),
     });
@@ -123,6 +136,10 @@ export function continuousSingleNoteActivation(): InstrumentActivation {
   };
 }
 
+/**
+ * Glissando - rapid scale run up and back down.
+ * Plays at full velocity (same as main keyboard notes).
+ */
 export const upDownScaleTriggerHigh: InstrumentActivation = ({
   scale,
   channel,
